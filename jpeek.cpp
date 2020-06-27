@@ -11,52 +11,65 @@ using namespace std;
     jvmti->Deallocate((unsigned char *)s); \
 }                                          \
 
-inline int printClass(jvmtiEnv *jvmti, jclass klazz)
+inline string describeClass(jvmtiEnv *jvmti, jclass klazz)
 {
+  string desc;
   jvmtiError err;
   char *sig = nullptr;
   char *gen = nullptr;
 
   err = jvmti->GetClassSignature(klazz, &sig, &gen);
-  if (err != JVMTI_ERROR_NONE) { cerr << "ERROR GETTING CLASS SIGNATURE!"; return -1; }
-  cerr << sig;
+  if (err != JVMTI_ERROR_NONE) { desc.append("ERROR GETTING CLASS SIGNATURE!"); return desc; }
+  desc.append(sig);
   if (gen)
-    cerr << "<" << gen << ">";
+  {
+    desc.append("<");
+    desc.append(gen);
+    desc.append(">");
+  }
   DEALLOCATE(sig)
   DEALLOCATE(gen)
 
-  return 0;
+  return desc;
 }
 
-inline int printMethod(jvmtiEnv *jvmti, jmethodID method)
+inline string describeMethod(jvmtiEnv *jvmti, jmethodID method)
 {
+  string desc;
   jvmtiError err;
   char *name = nullptr;
   char *sig = nullptr;
   char *gen = nullptr;
   
   err = jvmti->GetMethodName(method, &name, &sig, &gen);
-  if (err != JVMTI_ERROR_NONE) { cerr << "ERROR GETTING METHOD NAME AND SIGNATURE!"; return -1; }
-  cerr << name << " " << sig;
+  if (err != JVMTI_ERROR_NONE) { desc.append("ERROR GETTING METHOD NAME AND SIGNATURE!"); return desc; }
+  desc.append(name);
+  desc.append(" ");
+  desc.append(sig);
   if (gen)
-    cerr << "<" << gen << ">";
+  {
+    desc.append("<");
+    desc.append(gen);
+    desc.append(">");
+  }
   DEALLOCATE(name);
   DEALLOCATE(sig);
   DEALLOCATE(gen);
   
-  return 0;
+  return desc;
 }
 
-inline int printThread(jvmtiEnv *jvmti, jthread thread)
+inline string describeThread(jvmtiEnv *jvmti, jthread thread)
 {
-  jvmtiError          err;
-  jvmtiThreadInfo     threadInfo;
+  string          desc;
+  jvmtiError      err;
+  jvmtiThreadInfo threadInfo;
 
   err = jvmti->GetThreadInfo(thread, &threadInfo);
-  if (err != JVMTI_ERROR_NONE) { cerr << "ERROR READING THREAD INFO!" << endl; return -1; }
-  cerr << threadInfo.name;
+  if (err != JVMTI_ERROR_NONE) { desc.append("ERROR READING THREAD INFO!"); return desc; }
+  desc.append(threadInfo.name);
 
-  return 0;
+  return desc;
 }
 
 void JNICALL
@@ -72,22 +85,13 @@ VMInit(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread)
   if (err != JVMTI_ERROR_NONE) { cerr << "ERROR GETTING LOADED CLASSES!\n"; return; }
   cerr << "Number of classes loaded: " << class_count << endl;
   for (int i = 0; i < class_count; i++)
-  {
-    cerr << "  ";
-    printClass(jvmti, classes[i]);
-    cerr << endl;
-  }
+    cerr << "  " << describeClass(jvmti, classes[i]) << endl;
 }
 
 void JNICALL
 MethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread, jmethodID method)
 {
-  cerr << "[";
-  printThread(jvmti, thread);
-  cerr << "] ";
-  cerr << "Entered method: ";
-  printMethod(jvmti, method);
-  cerr << endl;
+  cerr << "[" << describeThread(jvmti, thread) << "] Entered method: " << describeMethod(jvmti, method) << endl;
 }
 
 void JNICALL
@@ -96,15 +100,11 @@ MethodExit(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread, jmethodID method, jbool
   jvmtiError err;
   jclass     declaringClass;
 
-  cerr << "[";
-  printThread(jvmti, thread);
-  cerr << "] ";
-  cerr << "Returned from method: ";
+  cerr << "[" << describeThread(jvmti, thread) << "] Returned from method: ";
   err = jvmti->GetMethodDeclaringClass(method, &declaringClass);
   if (err == JVMTI_ERROR_NONE)
-    printClass(jvmti, declaringClass);
-  cerr << ".";
-  printMethod(jvmti, method);
+    cerr << describeClass(jvmti, declaringClass);
+  cerr << "." << describeMethod(jvmti, method);
   if (byException)
     cerr << " with Exception";
   
@@ -114,17 +114,13 @@ MethodExit(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread, jmethodID method, jbool
 void JNICALL
 ThreadStart(jvmtiEnv *jvmti, JNIEnv * jni, jthread thread)
 {
-  cerr << "Thread started: ";
-  printThread(jvmti, thread);
-  cerr << endl;
+  cerr << "Thread started: " << describeThread(jvmti, thread) << endl;
 }
 
 void JNICALL
 ThreadEnd(jvmtiEnv *jvmti, JNIEnv * jni, jthread thread)
 {
-  cerr << "Thread ended: ";
-  printThread(jvmti, thread);
-  cerr << endl;
+  cerr << "Thread ended: " << describeThread(jvmti, thread) << endl;
 }
 
 void JNICALL
