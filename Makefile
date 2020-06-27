@@ -1,4 +1,4 @@
-CC=gcc
+CC=g++
 CFLAGS=-Wall
 OS=linux
 LIBDIR_JVMTI=/usr/lib/jvm/default-java/include
@@ -11,9 +11,9 @@ JAVAC=javac
 all: libjpeek.so JPeekDemo.class
 
 libjpeek.so: jpeek.o
-	$(CC) -shared -o $@ $^
+	$(CC) -fPIC -shared -o $@ $^
 
-jpeek.o: jpeek.c
+jpeek.o: jpeek.cpp
 	$(CC) -c $(CFLAGS) $(LIBS) -fPIC $< -o $@
 
 JPeekDemo.class: JPeekDemo.java
