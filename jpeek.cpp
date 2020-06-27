@@ -96,12 +96,20 @@ Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
 {
   jvmtiEnv            *jvmti;
   jint                res;
+  jvmtiError          err;
   jvmtiEventCallbacks *callbacks;
+  jvmtiCapabilities   capabilities;
 
   cerr << "JPeek agent loaded\n";
 
   res = jvm->GetEnv((void**)&jvmti, JVMTI_VERSION_1_0);
   if (res != 0) { cerr << "Error getting JVM environment!\n"; return -1; }
+
+  err = jvmti->GetCapabilities(&capabilities);
+  if (err != JVMTI_ERROR_NONE) { cerr << "Error getting capabilities!" << endl; return -5; }
+  capabilities.can_generate_method_entry_events = true;
+  err = jvmti->AddCapabilities(&capabilities);
+  if (err != JVMTI_ERROR_NONE) { cerr << "Error setting capabilities!" << endl; return -6; }
 
   callbacks = (jvmtiEventCallbacks*)calloc(1, sizeof(jvmtiEventCallbacks));
   if (!callbacks) { cerr << "Couldn't allocate memory for JVM TI callbacks!" << endl; return -2; }
@@ -109,14 +117,14 @@ Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
   callbacks->VMDeath = &VMDeath;
   callbacks->ThreadStart = &ThreadStart;
   callbacks->ThreadEnd = &ThreadEnd;
-//  callbacks->MethodEntry = &MethodEntry;
+  callbacks->MethodEntry = &MethodEntry;
   res = jvmti->SetEventCallbacks(callbacks, sizeof(jvmtiEventCallbacks));
   if (res != JNI_OK) { cerr << "Couldn't set JVM TI callbacks!" << endl; return -3; }
   res = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, nullptr);
   res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_DEATH, nullptr);
   res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_START, nullptr);
   res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_END, nullptr);
-//  res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, nullptr);
+  res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, nullptr);
   if (res != JNI_OK) { cerr << "Couldn't enable events!" << endl; return -4; }
 
   return JNI_OK;
