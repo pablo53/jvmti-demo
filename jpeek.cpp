@@ -51,6 +51,23 @@ MethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread, jmethodID method)
 }
 
 void JNICALL
+MethodExit(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread, jmethodID method, jboolean byException, jvalue retVal)
+{
+  char *name = nullptr;
+  char *sig = nullptr;
+  char *gen = nullptr;
+  
+  jvmti->GetMethodName(method, &name, &sig, &gen);
+  cerr << "Returned from method: " << name << "(" << sig << ")";
+  if (byException)
+    cerr << " with Exception";
+  cerr << endl;
+  DEALLOCATE(name);
+  DEALLOCATE(sig);
+  DEALLOCATE(gen);
+}
+
+void JNICALL
 ThreadStart(jvmtiEnv *jvmti, JNIEnv * jni, jthread thread)
 {
   jvmtiError          err;
@@ -98,6 +115,7 @@ Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
   err = jvmti->GetCapabilities(&capabilities);
   if (err != JVMTI_ERROR_NONE) { cerr << "Error getting capabilities!" << endl; return -5; }
   capabilities.can_generate_method_entry_events = true;
+  capabilities.can_generate_method_exit_events = true;
   err = jvmti->AddCapabilities(&capabilities);
   if (err != JVMTI_ERROR_NONE) { cerr << "Error setting capabilities!" << endl; return -6; }
 
@@ -108,6 +126,7 @@ Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
   callbacks->ThreadStart = &ThreadStart;
   callbacks->ThreadEnd = &ThreadEnd;
   callbacks->MethodEntry = &MethodEntry;
+  callbacks->MethodExit = &MethodExit;
   res = jvmti->SetEventCallbacks(callbacks, sizeof(jvmtiEventCallbacks));
   if (res != JNI_OK) { cerr << "Couldn't set JVM TI callbacks!" << endl; return -3; }
   res = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, nullptr);
@@ -115,6 +134,7 @@ Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
   res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_START, nullptr);
   res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_END, nullptr);
   res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, nullptr);
+  res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_EXIT, nullptr);
   if (res != JNI_OK) { cerr << "Couldn't enable events!" << endl; return -4; }
 
   return JNI_OK;
