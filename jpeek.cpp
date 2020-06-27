@@ -33,6 +33,12 @@ VMInit(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread)
   }
 }
 
+void JNICALL
+VMDeath(jvmtiEnv *jvmti, JNIEnv* jni)
+{
+  cerr << "JPeek died." << endl;
+}
+
 
 JNIEXPORT jint JNICALL
 Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
@@ -49,10 +55,12 @@ Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
   callbacks = (jvmtiEventCallbacks*)calloc(1, sizeof(jvmtiEventCallbacks));
   if (!callbacks) { cerr << "Couldn't allocate memory for JVM TI callbacks!" << endl; return -2; }
   callbacks->VMInit = &VMInit;
+  callbacks->VMDeath = &VMDeath;
   res = jvmti->SetEventCallbacks(callbacks, sizeof(jvmtiEventCallbacks));
   if (res != JNI_OK) { cerr << "Couldn't set JVM TI callbacks!" << endl; return -3; }
   res = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, nullptr);
-  if (res != JNI_OK) { cerr << "Couldn't enable JVMTI_EVENT_VM_INIT!" << endl; return -4; }
+  res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_DEATH, nullptr);
+  if (res != JNI_OK) { cerr << "Couldn't enable events!" << endl; return -4; }
 
   return JNI_OK;
 }
