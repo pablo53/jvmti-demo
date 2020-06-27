@@ -55,21 +55,11 @@ ThreadStart(jvmtiEnv *jvmti, JNIEnv * jni, jthread thread)
 {
   jvmtiError          err;
   jvmtiThreadInfo     threadInfo;
-  jvmtiEventCallbacks *callbacks;
-  jint                res;
 
   cerr << "Thread started: ";
   err = jvmti->GetThreadInfo(thread, &threadInfo);
   if (err) { cerr << "Error reading thread info!" << endl; return; }
   cerr << threadInfo.name << endl;
-
-  callbacks = (jvmtiEventCallbacks*)calloc(1, sizeof(jvmtiEventCallbacks));
-  if (!callbacks) { cerr << "Couldn't allocate memory for JVM TI callbacks in thread " << threadInfo.name << "!" << endl; return; }
-  res = jvmti->SetEventCallbacks(callbacks, sizeof(jvmtiEventCallbacks));
-  if (res != JNI_OK) { cerr << "Couldn't set JVM TI callbacks in thread " << threadInfo.name << "!" << endl; return; }
-  callbacks->MethodEntry = &MethodEntry;
-  res = res || jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, thread);
-  if (res != JNI_OK) { cerr << "Couldn't enable events in thread " << threadInfo.name << "!" << endl; return; }
 }
 
 void JNICALL
